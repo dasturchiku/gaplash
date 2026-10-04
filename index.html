@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GAPLASH — AI Til Repetitori</title>
+    <meta name="description" content="O'zbeklar uchun AI til repetitori. Chatbot emas — haqiqiy o'qituvchi!" />
+    <meta property="og:title" content="GAPLASH — AI Til Repetitori" />
+    <meta property="og:description" content="Chatbot emas. Haqiqiy AI repetitor. O'zbek tilidan ko'chadigan xatolarni taniydi." />
+    <meta name="theme-color" content="#134534" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Manrope:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+      #errbox { display:none; position:fixed; top:0; left:0; right:0; z-index:99999; background:#d84c3e; color:#fff; padding:12px 16px; font-family:monospace; font-size:13px; }
+    </style>
+    <script>
+      window.onerror = function(msg, url, line) {
+        var box = document.getElementById('errbox');
+        if (box) { box.style.display = 'block'; box.textContent = '⚠️ Xato: ' + msg + ' (satr: ' + line + ')'; }
+        return false;
+      };
+    </script>
+  </head>
+  <body>
+    <div id="errbox"></div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
