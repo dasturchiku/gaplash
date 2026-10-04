@@ -1,6 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Home, MessageCircle, BookOpen, GraduationCap, HelpCircle, Map, CreditCard, BarChart3, Mic, Headphones, PenTool, Mail, Drama, BookMarked, Languages, Swords, Target, Camera, Settings, School, Sun, Moon, Volume2, Award, Zap, Flame, ChevronRight, X, Check, RotateCcw, Plus, Download, Share2, ArrowRight, Star, Lock } from 'lucide-react';
-import confetti from 'canvas-confetti';
+// Confetti - xavfsiz wrapper
+const fireConfetti = () => {
+  try {
+    import('canvas-confetti').then((m: any) => {
+      const c = m.default || m;
+      if (typeof c === 'function') {
+        c({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      } else if (c && typeof c.default === 'function') {
+        c.default({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      }
+    }).catch(() => {});
+  } catch (e) {
+    // confetti ishlamasa ham sahifa buzilmasin
+  }
+};
 import { WORDS_EN, LESSONS_EN, GRAMMAR_EN, TESTS_EN, PLACEMENT, FREE_TALK, SHADOW_SENTENCES, MINIMAL_PAIRS, PHONEMES, SILK_ROAD, ROLES, STORY_NODES, INTERPRETER, IELTS_READING, IELTS_WRITING_RUBRIC, type Word, type Lesson, type Question } from './data';
 import { loadStore, saveStore, addXP, addWordToDeck, getDueWords, reviewWord, today, type StoreData, type DeckWord } from './store';
 import { checkAnswer, checkContrast, checkSpelling, getPraise, extractMemory, getMemoryReminder, speak, startRecognition, askAI } from './tutor';
@@ -32,9 +46,9 @@ export default function App() {
     setTimeout(() => setToast(''), 3000);
   }, []);
 
-  // Confetti
-  const fireConfetti = useCallback(() => {
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+  // Confetti - App ichida qayta aniqlash
+  const fireConfettiLocal = useCallback(() => {
+    fireConfetti();
   }, []);
 
   // Update store helper
@@ -76,9 +90,9 @@ export default function App() {
           <div className="p-4 md:p-6 max-w-4xl mx-auto">
             {panel === 'home' && <HomePanel store={store} setStore={setStore} setPanel={setPanel} />}
             {panel === 'chat' && <ChatPanel store={store} setStore={setStore} showToast={showToast} />}
-            {panel === 'words' && <WordsPanel store={store} setStore={setStore} showToast={showToast} fireConfetti={fireConfetti} />}
+            {panel === 'words' && <WordsPanel store={store} setStore={setStore} showToast={showToast} fireConfetti={fireConfettiLocal} />}
             {panel === 'grammar' && <GrammarPanel />}
-            {panel === 'test' && <TestPanel store={store} setStore={setStore} showToast={showToast} fireConfetti={fireConfetti} />}
+            {panel === 'test' && <TestPanel store={store} setStore={setStore} showToast={showToast} fireConfetti={fireConfettiLocal} />}
             {panel === 'silk' && <SilkRoadPanel store={store} />}
             {panel === 'passport' && <PassportPanel store={store} />}
             {panel === 'progress' && <ProgressPanel store={store} />}
@@ -89,7 +103,7 @@ export default function App() {
             {panel === 'roles' && <RolesPanel store={store} setStore={setStore} showToast={showToast} />}
             {panel === 'story' && <StoryPanel store={store} setStore={setStore} showToast={showToast} />}
             {panel === 'interpreter' && <InterpreterPanel store={store} setStore={setStore} showToast={showToast} />}
-            {panel === 'duel' && <DuelPanel store={store} setStore={setStore} showToast={showToast} fireConfetti={fireConfetti} />}
+            {panel === 'duel' && <DuelPanel store={store} setStore={setStore} showToast={showToast} fireConfetti={fireConfettiLocal} />}
             {panel === 'ielts' && <IELTSPanel store={store} setStore={setStore} showToast={showToast} checkPro={checkPro} />}
             {panel === 'stickers' && <StickersPanel store={store} />}
             {panel === 'settings' && <SettingsPanel store={store} setStore={setStore} showToast={showToast} />}
@@ -106,7 +120,7 @@ export default function App() {
 
       {/* Pro Modal */}
       {showProModal && (
-        <ProModal onClose={() => setShowProModal(false)} setStore={setStore} fireConfetti={fireConfetti} />
+        <ProModal onClose={() => setShowProModal(false)} store={store} setStore={setStore} fireConfetti={fireConfettiLocal} />
       )}
     </div>
   );
@@ -626,7 +640,7 @@ function ChatPanel({ store, setStore, showToast }: { store: StoreData; setStore:
     }
     
     setStore(newStore);
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    fireConfetti();
     setShowQuiz(false);
     setLessonIdx(lessonIdx + 1);
     setQuestionIdx(0);
@@ -2040,6 +2054,7 @@ function IELTSPanel({ store, setStore, showToast, checkPro }: { store: StoreData
   const [rDone, setRDone] = useState(false);
   const [wText, setWText] = useState('');
   const [wDone, setWDone] = useState(false);
+  const [wResults, setWResults] = useState<{results: {name: string; pass: boolean}[]; band: number} | null>(null);
 
   if (!checkPro('ielts')) {
     return (
@@ -2062,21 +2077,19 @@ function IELTSPanel({ store, setStore, showToast, checkPro }: { store: StoreData
 
   const readingScore = rAnswers.filter((a, i) => a === IELTS_READING.questions[i].a).length;
 
-  const checkWriting = () => {
-    setWDone(true);
+  const handleCheckWriting = () => {
     const results = IELTS_WRITING_RUBRIC.criteria.map(c => ({
       name: c.name,
       pass: c.check(wText),
     }));
     const passed = results.filter(r => r.pass).length;
     const band = Math.min(9, Math.max(4, Math.round(passed * 2 + readingScore)));
+    setWResults({ results, band });
+    setWDone(true);
     let newStore = addXP(store, 15);
     setStore(newStore);
     showToast(`IELTS band: ~${band}.0`);
-    return { results, band };
   };
-
-  const wResults = wDone ? checkWriting() : null;
 
   return (
     <div className="space-y-4">
@@ -2143,7 +2156,7 @@ function IELTSPanel({ store, setStore, showToast, checkPro }: { store: StoreData
             className="w-full p-4 border-2 border-ink rounded-lg bg-paper2 min-h-[200px] resize-y"
           />
 
-          <button onClick={checkWriting} className="btn btn-primary" disabled={!wText.trim() || wDone}>
+          <button onClick={handleCheckWriting} className="btn btn-primary" disabled={!wText.trim() || wDone}>
             Tekshirish
           </button>
 
@@ -2233,7 +2246,12 @@ function SettingsPanel({ store, setStore, showToast }: { store: StoreData; setSt
     if (proCode === 'GAPLASH-2026-PRO' || proCode === 'GAPLASH-PRO') {
       setStore({ ...store, pro: true });
       showToast("🎉 Pro aktivlashtirildi!");
-      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+      try {
+        import('canvas-confetti').then(m => {
+          const c = m.default || m;
+          if (typeof c === 'function') c({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+        }).catch(() => {});
+      } catch (e) {}
     } else {
       showToast("❌ Noto'g'ri kod");
     }
@@ -2427,7 +2445,7 @@ function ClassroomPanel({ store, showToast }: { store: StoreData; showToast: (m:
 }
 
 // ============ PRO MODAL ============
-function ProModal({ onClose, setStore, fireConfetti }: { onClose: () => void; setStore: (s: StoreData) => void; fireConfetti: () => void }) {
+function ProModal({ onClose, store, setStore, fireConfetti }: { onClose: () => void; store: StoreData; setStore: (s: StoreData) => void; fireConfetti: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-paper rounded-2xl max-w-md w-full p-6 space-y-4 border-2 border-ink">
@@ -2465,7 +2483,7 @@ function ProModal({ onClose, setStore, fireConfetti }: { onClose: () => void; se
           <button onClick={onClose} className="btn btn-ghost flex-1">Keyinroq</button>
           <button
             onClick={() => {
-              setStore({ ...(loadStore()), pro: true });
+              setStore({ ...store, pro: true });
               fireConfetti();
               onClose();
             }}
